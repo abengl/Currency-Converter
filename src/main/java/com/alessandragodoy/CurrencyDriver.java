@@ -1,53 +1,63 @@
 package com.alessandragodoy;
 
-import com.alessandragodoy.config.EnvConfig;
+import com.alessandragodoy.exception.InvalidInputException;
+import com.alessandragodoy.integration.RequestExchangeClient;
 import com.alessandragodoy.model.Exchange;
-import com.google.gson.Gson;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.util.Scanner;
 import java.util.logging.Logger;
 
 public class CurrencyDriver {
 	private static final Logger logger = Logger.getLogger(CurrencyDriver.class.getName());
 
-	public static void main(String[] args) throws IOException, InterruptedException {
+	public static void main(String[] args) {
 		Scanner in = new Scanner(System.in);
-		System.out.println("Enter the base currency country code (e.g. USD): ");
-		String baseCode = in.nextLine().trim();
-
-		System.out.println("Enter the target currency country code (e.g. PEN): ");
-		String targetCode = in.nextLine().trim();
-
-		System.out.println("Enter the dollar amount to exchange: ");
-		Double amount = in.nextDouble();
-
-		String url = EnvConfig.get("API_URL_BASE") + "/" + baseCode + "/" + targetCode;
+		RequestExchangeClient request = new
+				RequestExchangeClient();
+		String baseCode = "";
+		String targetCode = "";
+		double amount = 0;
 
 		try {
-			HttpClient client = HttpClient.newHttpClient();
-			HttpRequest request = HttpRequest
-					.newBuilder()
-					.uri(URI.create(url))
-					.build();
-			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			System.out.println("Enter the base currency country code (e.g. USD): ");
+			baseCode = validateCodeInput(in);
 
-			String jsonResponse = response.body();
-			Exchange operation = new Gson().fromJson(jsonResponse, Exchange.class);
-			logger.info("exchange rate: " + operation.conversion_rate());
+			System.out.println("Enter the target currency country code (e.g. PEN): ");
+			targetCode = validateCodeInput(in);
 
-			double exchange = operation.conversion_rate() * amount;
+			System.out.println("Enter the amount to exchange: ");
+			amount = validateAmount(in);
+			Exchange exchange = request.requestExchange(baseCode, targetCode);
+			logger.info("exchange rate: " + exchange.conversion_rate());
+
+			double exchangeResult = exchange.conversion_rate() * amount;
 
 			System.out.printf("The exchange of %.2f %s results in %.2f %s%n", amount, baseCode,
-					exchange, targetCode);
-			logger.info("Successful operation.");
+					exchangeResult, targetCode);
+
+		} catch (InvalidInputException e) {
+			System.out.println(e.getMessage());
 		} catch (RuntimeException e) {
 			System.out.println(e.getMessage());
-			logger.warning("Invalid operation.");
 		}
+	}
+
+	static String validateCodeInput(Scanner in) {
+		String countryCode = in.nextLine().trim();
+		if (countryCode.isEmpty()) {
+			throw new InvalidInputException("The country code is a required value.");
+		}
+		if (!countryCode.matches("[A-Za-z]{3}")) {
+			throw new InvalidInputException("The country code must be 3 valid characters");
+		}
+		return countryCode.toUpperCase();
+	}
+
+	static double validateAmount(Scanner in) {
+		double amount = in.nextDouble();
+		if (amount <= 0) {
+			throw new InvalidInputException("The amount must be a positive number greater than zero.");
+		}
+		return amount;
 	}
 }
