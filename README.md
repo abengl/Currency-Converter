@@ -1,4 +1,4 @@
-# Alura-Conversor-Monedas
+# Currency Converter
 ### Table of Contents
 - [About The Project](#about-the-project)
   - [Built With](#built-with)
