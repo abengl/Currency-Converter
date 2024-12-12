@@ -2,6 +2,7 @@ package com.alessandragodoy.integration;
 
 import com.alessandragodoy.config.EnvConfig;
 import com.alessandragodoy.exception.ClientRequestException;
+import com.alessandragodoy.model.ErrorResponse;
 import com.alessandragodoy.model.Exchange;
 import com.google.gson.Gson;
 
@@ -21,12 +22,13 @@ public class RequestExchangeClient {
 				.build();
 		try {
 			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-
+			Gson gson = new Gson();
 			if (response.statusCode() != 200) {
-				throw new ClientRequestException("There was a client error.");
+				throw new ClientRequestException("There was a client error: " + gson.fromJson(response.body(),
+						ErrorResponse.class).errorType());
 			}
 
-			return new Gson().fromJson(response.body(), Exchange.class);
+			return gson.fromJson(response.body(), Exchange.class);
 
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
